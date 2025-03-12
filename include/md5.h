@@ -15,64 +15,84 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef CONSTEXPR_MD5_H_
-#define CONSTEXPR_MD5_H_
+#ifndef HEADER_INCLUSION_GUARD_b451fcab_dc35_4960_ae62_0de12c893981
+#define HEADER_INCLUSION_GUARD_b451fcab_dc35_4960_ae62_0de12c893981
 
-#include <array>
-#include <climits>
-#include <cstdint>
-#include <cstring>
+#include <climits>          // CHAR_BIT
+#include <cstddef>          // size_t
+#include <cstdint>          // int16_t, uint32_t
+#include <array>            // array
 
 namespace md5 {
-    using Digest = std::array<unsigned char, 16>;
+    using Digest = __uint128_t;
 
     namespace details {
-        constexpr uint32_t CBLOCK = 64;
-        constexpr uint32_t LBLOCK = CBLOCK / 4;
+        using std::array, std::uint32_t, std::size_t;
+        using Array = array< char unsigned, 128u / CHAR_BIT >;
 
-        constexpr size_t const_strlen(const char* str)
+        constexpr __uint128_t make_uint128(Array const &arr)
         {
-            return (*str == 0) ? 0 : const_strlen(str + 1) + 1;
-        }
-
-        constexpr Digest make_digest(const std::array<uint32_t, 4>& input) noexcept {
-            Digest digest{};
-            for (size_t i = 0; i < input.size(); ++i) {
-                digest[i * 4] = static_cast<unsigned char>((input[i]) & 0xff);
-                digest[i * 4 + 1] = static_cast<unsigned char>((input[i] >> 8) & 0xff);
-                digest[i * 4 + 2] = static_cast<unsigned char>((input[i] >> 16) & 0xff);
-                digest[i * 4 + 3] = static_cast<unsigned char>((input[i] >> 24) & 0xff);
+            __uint128_t n = 0u;
+            for ( auto const c : arr )
+            {
+                n <<= CHAR_BIT;
+                n |= c;
             }
-            return digest;
+            return n;
         }
 
-        using Fn = uint32_t(*)(uint32_t, uint32_t, uint32_t);
-        constexpr uint32_t f(uint32_t b, uint32_t c, uint32_t d) noexcept {
+        constexpr uint32_t block_C = 64u;
+        constexpr uint32_t block_L = block_C / 4u;
+
+        constexpr size_t const_strlen(char const *const str)
+        {
+            return (*str == '\0') ? 0u : const_strlen(str + 1) + 1u;
+        }
+
+        constexpr Digest make_digest(array<uint32_t, 4u> const &input) noexcept
+        {
+            Array digest{};
+            for ( size_t i = 0u; i < input.size(); ++i )
+            {
+                digest[i * 4u + 0u] = (input[i] >> 0u ) & 0xff;
+                digest[i * 4u + 1u] = (input[i] >> 8u ) & 0xff;
+                digest[i * 4u + 2u] = (input[i] >> 16u) & 0xff;
+                digest[i * 4u + 3u] = (input[i] >> 24u) & 0xff;
+            }
+            return make_uint128(digest);
+        }
+
+        constexpr uint32_t f(uint32_t const b, uint32_t const c, uint32_t const d) noexcept
+        {
             return (b & c) | (~b & d);
         }
 
-        constexpr uint32_t g(uint32_t b, uint32_t c, uint32_t d) noexcept {
+        constexpr uint32_t g(uint32_t const b, uint32_t const c, uint32_t const d) noexcept
+        {
             return (b & d) | (c & ~d);
         }
 
-        constexpr uint32_t h(uint32_t b, uint32_t c, uint32_t d) noexcept {
+        constexpr uint32_t h(uint32_t const b, uint32_t const c, uint32_t const d) noexcept
+        {
             return b ^ c ^ d;
         }
 
-        constexpr uint32_t i(uint32_t b, uint32_t c, uint32_t d) noexcept {
+        constexpr uint32_t i(uint32_t const b, uint32_t const c, uint32_t const d) noexcept
+        {
             return c ^ (b | ~d);
         }
 
-        constexpr Fn F[4] = { f, g, h, i };
+        typedef uint32_t (*Fn)(uint32_t, uint32_t, uint32_t);
+        constexpr Fn block_F[4u] = { f, g, h, i };
 
-        constexpr uint32_t G[CBLOCK] = {
-            0, 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
-            1, 6, 11,  0,  5, 10, 15,  4,  9, 14,  3,  8, 13,  2,  7, 12,
-            5, 8, 11, 14,  1,  4,  7, 10, 13,  0,  3,  6,  9, 12, 15,  2,
-            0, 7, 14,  5, 12, 3,  10,  1,  8, 15,  6, 13,  4, 11,  2,  9
+        constexpr uint32_t block_G[block_C] = {
+            0u, 1u,  2u,  3u,  4u,  5u,  6u,  7u,  8u,  9u, 10u, 11u, 12u, 13u, 14u, 15u,
+            1u, 6u, 11u,  0u,  5u, 10u, 15u,  4u,  9u, 14u,  3u,  8u, 13u,  2u,  7u, 12u,
+            5u, 8u, 11u, 14u,  1u,  4u,  7u, 10u, 13u,  0u,  3u,  6u,  9u, 12u, 15u,  2u,
+            0u, 7u, 14u,  5u, 12u, 3u,  10u,  1u,  8u, 15u,  6u, 13u,  4u, 11u,  2u,  9u
         };
 
-        constexpr uint32_t K[CBLOCK] = {
+        constexpr uint32_t block_K[block_C] = {
             0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
             0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
             0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be,
@@ -91,15 +111,15 @@ namespace md5 {
             0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391
         };
 
-        constexpr uint32_t S[LBLOCK] = {
-            7, 12, 17, 22,
-            5,  9, 14, 20,
-            4, 11, 16, 23,
-            6, 10, 15, 21
+        constexpr uint32_t block_S[block_L] = {
+            7u, 12u, 17u, 22u,
+            5u,  9u, 14u, 20u,
+            4u, 11u, 16u, 23u,
+            6u, 10u, 15u, 21u
         };
 
-        constexpr char PADDING[CBLOCK] = {
-            -128, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x80 = -128
+        constexpr char padding[block_C] = {
+            0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x80 = -128 two's complement
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -109,25 +129,28 @@ namespace md5 {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
         };
 
-        constexpr uint32_t rotate(uint32_t x, uint32_t n) noexcept {
-            return (x << n) | (x >> (32 - n));
+        constexpr uint32_t rotate(uint32_t const x, uint32_t const n) noexcept
+        {
+            return (x << n) | (x >> (32u - n));
         }
 
-        constexpr uint32_t t(Fn f, uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t x, uint32_t s, uint32_t ac) noexcept {
-            return b + rotate(a + f(b, c, d) + x + ac, s);
+        constexpr uint32_t t(Fn const arg_func, uint32_t const a, uint32_t const b, uint32_t const c, uint32_t const d, uint32_t const x, uint32_t const s, uint32_t const ac) noexcept
+        {
+            return b + rotate(a + arg_func(b, c, d) + x + ac, s);
         }
 
-        constexpr uint32_t to_uint32(const unsigned char* data) noexcept {
+        constexpr uint32_t to_uint32(char unsigned const *const data) noexcept
+        {
             return
-                (static_cast<uint32_t>(data[3]) << 24) |
-                (static_cast<uint32_t>(data[2]) << 16) |
-                (static_cast<uint32_t>(data[1]) << 8) |
-                (static_cast<uint32_t>(data[0]));
+                (static_cast<uint32_t>(data[3]) << 24u) |
+                (static_cast<uint32_t>(data[2]) << 16u) |
+                (static_cast<uint32_t>(data[1]) << 8u ) |
+                (static_cast<uint32_t>(data[0]) << 0u );
         }
 
         struct Context {
-            std::array<unsigned char, CBLOCK> buffer;
-            std::array<uint32_t, 4> state;
+            array<char unsigned, block_C> buffer;
+            array<uint32_t, 4u> state;
             uint32_t nl, nh;
 
             constexpr Context() noexcept
@@ -137,20 +160,25 @@ namespace md5 {
                 , nh(0)
             {}
 
-            constexpr void append(const char* data, size_t len) noexcept {
-                std::array<uint32_t, LBLOCK> input{};
-                auto k = (nl >> 3) & 0x3f;
+            constexpr void append(char const *const data, size_t const len) noexcept
+            {
+                array<uint32_t, block_L> input{};
+                auto k = (nl >> 3u) & 0x3f;
                 auto length = static_cast<uint32_t>(len);
-                nl += length << 3;
-                if (nl < length << 3) {
-                    nh += 1;
+                nl += length << 3u;
+                if ( nl < (length << 3u) )
+                {
+                    nh += 1u;
                 }
-                nh += length >> 29;
-                for (auto ptr = data; ptr != data + len; ++ptr) {
-                    buffer[k++] = static_cast<unsigned char>(static_cast<int16_t>(*ptr) + UCHAR_MAX + 1);
-                    if (k == 0x40) {
+                nh += length >> 29u;
+                for (auto ptr = data; ptr != data + len; ++ptr)
+                {
+                    buffer[k++] = static_cast<char unsigned>(static_cast<int16_t>(*ptr) + UCHAR_MAX + 1);
+                    if (k == 0x40)
+                    {
                         auto j = 0;
-                        for (auto i = 0; i < LBLOCK; ++i) {
+                        for (auto i = 0; i < block_L; ++i)
+                        {
                             input[i] = to_uint32(&buffer[j]);
                             j += 4;
                         }
@@ -160,15 +188,18 @@ namespace md5 {
                 }
             }
 
-            constexpr void transform(const std::array<uint32_t, LBLOCK>& input) noexcept {
+            constexpr void transform(const array<uint32_t, block_L>& input) noexcept
+            {
                 auto a = state[0], b = state[1], c = state[2], d = state[3];
-                for (uint32_t r = 0; r < 4; ++r) {
-                    const auto g = G + r * LBLOCK;
-                    const auto s = S + r * 4;
-                    const auto k = K + r * LBLOCK;
+                for ( uint32_t r = 0u; r < 4u; ++r )
+                {
+                    const auto g = block_G + r * block_L;
+                    const auto s = block_S + r * 4;
+                    const auto k = block_K + r * block_L;
 
-                    for (auto i = 0; i < input.size(); ++i) {
-                        const auto new_b = t(F[r], a, b, c, d, input[g[i]], s[i % 4], k[i]);
+                    for (auto i = 0; i < input.size(); ++i)
+                    {
+                        const auto new_b = t(block_F[r], a, b, c, d, input[g[i]], s[i % 4], k[i]);
                         a = d;
                         d = c;
                         c = b;
@@ -181,36 +212,39 @@ namespace md5 {
                 state[3] += d;
             }
 
-            constexpr Digest final() noexcept {
-
-                std::array<uint32_t, LBLOCK> input{};
-                const auto k = ((nl >> 3) & 0x3f);
+            constexpr Digest final() noexcept
+            {
+                array<uint32_t, block_L> input{};
+                unsigned const k = ((nl >> 3u) & 0x3f);
                 input[14] = nl;
                 input[15] = nh;
 
-                append(PADDING, k < 56 ? 56 - k : 120 - k);
+                append(padding, k < 56 ? 56 - k : 120 - k);
 
-                auto j = 0;
-                for (auto i = 0; i < 14; ++i) {
+                unsigned j = 0u;
+                for ( unsigned i = 0u; i < 14u; ++i )
+                {
                     input[i] = to_uint32(&buffer[j]);
-                    j += 4;
+                    j += 4u;
                 }
-                transform(input);
 
+                transform(input);
                 return make_digest(state);
             }
         };
-    }
+    }  // close namespace 'details'
 
     template <size_t N>
-    constexpr Digest compute(const char(&data)[N]) noexcept {
+    constexpr Digest compute( char const (&data)[N] ) noexcept
+    {
         details::Context c;
         // Don't hash the null-terminator
-        c.append(data, N - 1);
+        c.append(data, N - 1u);
         return c.final();
     }
 
-    constexpr Digest compute(const char* s) noexcept {
+    constexpr Digest compute(char const *const s) noexcept
+    {
         details::Context c;
         // Don't hash the null-terminator
         c.append(s, details::const_strlen(s));
@@ -218,4 +252,4 @@ namespace md5 {
     }
 }
 
-#endif
+#endif  // HEADER_INCLUSION_GUARD
