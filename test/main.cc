@@ -1,49 +1,54 @@
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include "doctest/doctest.h"
+#include <random>           // random_device
+#include <type_traits>      // is_constant_evaluated
 #include "md5.h"
 
-constexpr md5::Digest RESULTS[] = {
-    md5::compute(""),
-    md5::compute("a"),
-    md5::compute("abc"),
-    md5::compute("message digest"),
-    md5::compute("abcdefghijklmnopqrstuvwxyz"),
-    md5::compute("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"),
-    md5::compute("12345678901234567890123456789012345678901234567890123456789012345678901234567890"),
-    md5::compute("The quick brown fox jumps over the lazy dog")
-};
+consteval __uint128_t uuid(char const *const name) noexcept
+{
+    // The following line shouldn't be needed
+    // but I'm a fan of belt and braces
+    static_assert( std::is_constant_evaluated() );
+    md5::details::Context c;
+    c.append( name, md5::details::const_strlen(name) );
+    c.append( "This is my salt!", sizeof "This is my salt!" - 1u );
+    return c.final();
+}
 
-TEST_CASE("testing the MD5 hash function") {
-    CHECK_EQ(
-        RESULTS[0],
-        md5::Digest{ 0xd4, 0x1d, 0x8c, 0xd9, 0x8f, 0x00, 0xb2, 0x04, 0xe9, 0x80, 0x09, 0x98, 0xec, 0xf8, 0x42, 0x7e }
-    );
-    CHECK_EQ(
-        RESULTS[1],
-        md5::Digest{ 0x0c, 0xc1, 0x75, 0xb9, 0xc0, 0xf1, 0xb6, 0xa8, 0x31, 0xc3, 0x99, 0xe2, 0x69, 0x77, 0x26, 0x61 }
-    );
-    CHECK_EQ(
-        RESULTS[2],
-        md5::Digest{ 0x90, 0x01, 0x50, 0x98, 0x3c, 0xd2, 0x4f, 0xb0, 0xd6, 0x96, 0x3f, 0x7d, 0x28, 0xe1, 0x7f, 0x72 }
-    );
-    CHECK_EQ(
-        RESULTS[3],
-        md5::Digest{ 0xf9, 0x6b, 0x69, 0x7d, 0x7c, 0xb7, 0x93, 0x8d, 0x52, 0x5a, 0x2f, 0x31, 0xaa, 0xf1, 0x61, 0xd0 }
-    );
-    CHECK_EQ(
-        RESULTS[4],
-        md5::Digest{ 0xc3, 0xfc, 0xd3, 0xd7, 0x61, 0x92, 0xe4, 0x00, 0x7d, 0xfb, 0x49, 0x6c, 0xca, 0x67, 0xe1, 0x3b }
-    );
-    CHECK_EQ(
-        RESULTS[5],
-        md5::Digest{ 0xd1, 0x74, 0xab, 0x98, 0xd2, 0x77, 0xd9, 0xf5, 0xa5, 0x61, 0x1c, 0x2c, 0x9f, 0x41, 0x9d, 0x9f }
-    );
-    CHECK_EQ(
-        RESULTS[6],
-        md5::Digest{ 0x57, 0xed, 0xf4, 0xa2, 0x2b, 0xe3, 0xc9, 0x55, 0xac, 0x49, 0xda, 0x2e, 0x21, 0x07, 0xb6, 0x7a }
-    );
-    CHECK_EQ(
-        RESULTS[7],
-        md5::Digest{ 0x9e, 0x10, 0x7d, 0x9d, 0x37, 0x2b, 0xb6, 0x82, 0x6b, 0xd8, 0x1d, 0x35, 0x42, 0xa4, 0x19, 0xd6 }
-    );
+__uint128_t uuid(void) noexcept(false)
+{
+    std::random_device rd;  // might throw
+    // rd() yields an unsigned integer type of implementation-defined width
+    __uint128_t retval = 0u;
+    static_assert( 0u == (sizeof(__uint128_t) % sizeof(rd())) );
+    constexpr unsigned how_many_uints = sizeof(__uint128_t) / sizeof(rd());
+    for ( unsigned n = 0u; n < how_many_uints; ++n )
+    {
+        retval <<= 128u / how_many_uints;
+        retval  |= rd();  // might throw
+    }
+    return retval;
+}
+
+// ======================= Here's some test code =========================
+
+#include <iostream>    // cout, endl
+#include <ios>         // hex
+
+int main(int const argc, char **const argv)
+{
+    switch ( argc )
+    {
+    case (int)uuid("I like chocolate!"):
+        break;
+    }
+
+    constexpr auto monkey = uuid("frog");
+    std::cout << std::hex << (uint64_t)(monkey >> 64u) << std::endl;
+
+    // constexpr auto b = uuid();   This line will fail to compiler
+
+    // Be aware though that the following line compiles
+    // successfully even though argc isn't known
+    // until runtime. This is because the argument
+    // to the function is known at compile time.
+    if ( argc & 1 ) return (int)uuid("abc");
 }
