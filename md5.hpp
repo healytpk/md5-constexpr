@@ -269,6 +269,7 @@ namespace md5 {
     }
 #endif //__cpp_lib_string_view
 
+/*
     constexpr __uint128_t to_uint128(Digest const &arr)
     {
         __uint128_t n = 0u;
@@ -285,6 +286,7 @@ namespace md5 {
 
         return n;
     }
+*/
 }
 
 constexpr md5::Digest rand128_to_UUIDv4(md5::Digest arg) noexcept
