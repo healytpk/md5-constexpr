@@ -3,7 +3,7 @@
 
 // Written for C++14 compilers and above
 
-#include <climits>          // CHAR_BIT
+#include <climits>          // CHAR_BIT, UCHAR_MAX
 #include <cstddef>          // size_t
 #include <cstdint>          // int16_t
 #include <cstring>          // strlen
@@ -22,13 +22,14 @@ namespace md5 {
 
         using std::array;
         using std::size_t;
-
-        template<typename T>
-        constexpr bool undergoes_promotion = std::is_integral<T>::value && !std::is_same<T, decltype( T() + T() )>::value;
+        using std::uint_fast32_t;
 
         // We can't use uint_fast32_t if it undergoes promotion,
         // so instead use long unsigned (which might be 64-Bit)
-        typedef std::conditional_t< undergoes_promotion<std::uint_fast32_t>, long unsigned, std::uint_fast32_t > UIntType;
+        typedef typename std::conditional<
+            std::is_same< uint_fast32_t, decltype(uint_fast32_t() + uint_fast32_t()) >::value,
+            uint_fast32_t,
+            long unsigned >::type UIntType;
 
         constexpr UIntType constant_c = 64u;
         constexpr UIntType constant_L = constant_c / 4u;
@@ -286,11 +287,11 @@ namespace md5 {
     }
 }
 
-constexpr __uint128_t rand128_to_UUIDv4(__uint128_t arg) noexcept
+constexpr md5::Digest rand128_to_UUIDv4(md5::Digest arg) noexcept
 {
     // Set to version 4 and IETF variant
-    arg &= ((__uint128_t)0xffffffffffff003f << 64u) | 0xff0fffffffffffff;
-    arg |= ((__uint128_t)0x0000000000000080 << 64u) | 0x0040000000000000;
+    //arg &= ((__uint128_t)0xffffffffffff003f << 64u) | 0xff0fffffffffffff;
+    //arg |= ((__uint128_t)0x0000000000000080 << 64u) | 0x0040000000000000;
     return arg;
 }
 
@@ -299,35 +300,22 @@ constexpr __uint128_t rand128_to_UUIDv4(__uint128_t arg) noexcept
 #else
     constexpr
 #endif
-__uint128_t uuid(char const *const name) noexcept
+md5::Digest uuid(char const *const name) noexcept
 {
-    __uint128_t const digest = md5::to_uint128((md5::details::Context() << name << "This is my salt!").final());
+    md5::Digest const digest = (md5::details::Context() << name << "This is my salt!").final();
 #ifdef UUID_ONLY_122_BITS
     return rand128_to_UUIDv4(digest);
 #endif
     return digest;
 }
 
-__uint128_t uuid(void) noexcept(false)
+md5::Digest uuid(void) noexcept(false)
 {
     std::random_device rd;  // might throw
     // rd() yields an unsigned integer type of implementation-defined width
-    constexpr unsigned how_many_full_uints = sizeof(__uint128_t) / sizeof(rd());
-    __uint128_t retval = 0u;
-    for ( unsigned n = 0u; n < how_many_full_uints; ++n )
-    {
-        retval <<= 128u / how_many_full_uints;
-        retval  |= rd();  // might throw
-    }
-
-    constexpr unsigned extra_bits = sizeof(__uint128_t) % sizeof(rd());
-    if constexpr ( extra_bits )
-    {
-        retval <<= extra_bits;
-        retval  |= rd();  
-    }
-
-    return retval;
+    md5::Digest d;
+    for ( auto &b : d ) b = static_cast< char unsigned >(  rd() & UCHAR_MAX  );
+    return d;
 }
 
 #endif  // HEADER_INCLUSION_GUARD
