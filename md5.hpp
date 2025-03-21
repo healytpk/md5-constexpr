@@ -19,11 +19,12 @@ namespace md5 {
     using Digest = std::array< char unsigned, (128u / CHAR_BIT) + !!(128u % CHAR_BIT) >;
 
     namespace details {
-        
-        using std::array, std::size_t;
+
+        using std::array;
+        using std::size_t;
 
         template<typename T>
-        constexpr bool undergoes_promotion = std::is_integral_v<T> && !std::is_same_v<T, decltype( T() + T() )>;
+        constexpr bool undergoes_promotion = std::is_integral<T>::value && !std::is_same<T, decltype( T() + T() )>::value;
 
         // We can't use uint_fast32_t if it undergoes promotion,
         // so instead use long unsigned (which might be 64-Bit)
