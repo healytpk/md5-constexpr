@@ -16,7 +16,18 @@
 #endif
 
 namespace md5 {
-    using Digest = std::array< char unsigned, (128u / CHAR_BIT) + !!(128u % CHAR_BIT) >;
+    struct Digest {
+        static constexpr unsigned count = (128u / CHAR_BIT) + !!(128u % CHAR_BIT);
+        char unsigned b[count];
+        constexpr char unsigned &operator[](unsigned const n) noexcept
+        {
+            return this->b[n];
+        }
+        constexpr char unsigned       *begin(void)       noexcept { return b; }
+        constexpr char unsigned       *end  (void)       noexcept { return b + count; }
+        constexpr char unsigned const *begin(void) const noexcept { return b; }
+        constexpr char unsigned const *end  (void) const noexcept { return b + count; }
+    };
 
     namespace details {
 
@@ -150,7 +161,7 @@ namespace md5 {
         }
 
         struct Context {
-            array<char unsigned, constant_c> buffer;
+            char unsigned buffer[constant_c];
             array<UIntType, 4u> state;
             UIntType nl, nh;
 
@@ -163,7 +174,7 @@ namespace md5 {
 
             constexpr void append(char const *const data, size_t const len) noexcept
             {
-                array<UIntType, constant_L> input{};
+                UIntType input[constant_L]{};
                 UIntType k = (nl >> 3u) & 0x3f;
                 UIntType const length = static_cast<UIntType>(len);
                 nl += length << 3u;
@@ -205,16 +216,16 @@ namespace md5 {
             }
 #endif
 
-            constexpr void transform(array<UIntType, constant_L> const &input) noexcept
+            constexpr void transform(UIntType const (&input)[constant_L]) noexcept
             {
-                UIntType a = state[0], b = state[1], c = state[2], d = state[3];
+                UIntType a = std::get<0u>(state), b = std::get<1u>(state), c = std::get<2u>(state), d = std::get<3u>(state);
                 for ( unsigned r = 0u; r < 4u; ++r )
                 {
                     UIntType const *const pG = block_G + r * constant_L;
                     UIntType const *const pS = block_S + r * 4u;
                     UIntType const *const pK = block_K + r * constant_L;
 
-                    for ( unsigned i = 0; i < input.size(); ++i )
+                    for ( unsigned i = 0; i < constant_L; ++i )
                     {
                         auto const new_b = t(array_of_funcptrs[r], a, b, c, d, input[pG[i]], pS[i % 4u], pK[i]);
                         a = d;
@@ -223,15 +234,15 @@ namespace md5 {
                         b = new_b;
                     }
                 }
-                state[0] += a;
-                state[1] += b;
-                state[2] += c;
-                state[3] += d;
+                std::get<0u>(state) += a;
+                std::get<1u>(state) += b;
+                std::get<2u>(state) += c;
+                std::get<3u>(state) += d;
             }
 
             constexpr Digest final(void) noexcept
             {
-                array<UIntType, constant_L> input{};
+                UIntType input[constant_L]{};
                 unsigned const k = (nl >> 3u) & 0x3f;
                 input[14] = nl;
                 input[15] = nh;
