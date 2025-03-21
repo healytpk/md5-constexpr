@@ -16,7 +16,7 @@ jobs:
       run: sudo apt update; sudo apt install -y g++-m68k-linux-gnu qemu-user-static
     - uses: actions/checkout@v2
     - name: build
-      run: m68k-linux-gnu-g++ -o prog main.cpp -std=c++14 -static > build_log.txt 2>&1
+      run: m68k-linux-gnu-g++ -o prog main.cpp -std=c++14 -static
     - uses: actions/upload-artifact@v4
       with:
         name: build_log.txt
