@@ -19,7 +19,7 @@ jobs:
       run: dir "C:\Program Files\Embarcadero\RAD_Studio_11\bin"
       shell: cmd
     - name: build
-      run: C:\Progra~1\Embarcadero\RAD_Studio_11\bin\bcc32c.exe -o prog.exe main.cpp -std=c++14
+      run: C:\Progra~1\Embarcadero\RAD_Studio_11\bin\bcc32c.exe -o prog.exe main.cpp -std=c++17
       shell: cmd
     - name: upload executable
       uses: actions/upload-artifact@v4
