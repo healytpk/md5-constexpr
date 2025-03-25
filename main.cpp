@@ -1,6 +1,4 @@
-#include <iostream>    // cout, endl
-#include <ios>         // hex
-#include <iomanip>
+#include <cstdio>    // puts
 #include "md5.hpp"
 
 int main(int const argc, char **const argv)
@@ -16,8 +14,9 @@ int main(int const argc, char **const argv)
 */
 
     constexpr auto monkey = uuid("frog");
-    for ( auto const &b : monkey ) std::cout << std::hex << std::setfill('0') << std::setw(2) << (unsigned)b;
-    std::cout << std::endl;
+    char str[32u + 1u];
+    uuid_to_cstr(monkey, str);
+    std::puts(str);
 
     // constexpr auto b = uuid();   This line will fail to compiler
 

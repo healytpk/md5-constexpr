@@ -16,18 +16,23 @@
 #endif
 
 namespace md5 {
-    struct Digest {
-        static constexpr unsigned count = (128u / CHAR_BIT) + !!(128u % CHAR_BIT);
-        char unsigned b[count];
-        constexpr char unsigned &operator[](unsigned const n) noexcept
-        {
-            return this->b[n];
-        }
+
+    constexpr char hexchars[] = "0123456789abcdef";
+
+    template<typename T, std::size_t N>
+    struct array {
+        static constexpr unsigned count = N;  // --------------------------- FIX THIS
+        T b[count];
+        constexpr T       &operator[](unsigned const n)       noexcept { return this->b[n]; }
+        constexpr T const &operator[](unsigned const n) const noexcept { return this->b[n]; }
         constexpr char unsigned       *begin(void)       noexcept { return b; }
         constexpr char unsigned       *end  (void)       noexcept { return b + count; }
         constexpr char unsigned const *begin(void) const noexcept { return b; }
         constexpr char unsigned const *end  (void) const noexcept { return b + count; }
+        constexpr std::size_t           size(void) const noexcept { return N; }
     };
+
+    typedef array< char unsigned, (128u / CHAR_BIT) + !!(128u % CHAR_BIT) > Digest;
 
     namespace details {
 
@@ -329,6 +334,22 @@ md5::Digest uuid(void) noexcept(false)
     md5::Digest d;
     for ( auto &b : d ) b = static_cast< char unsigned >(  rd() & UCHAR_MAX  );
     return d;
+}
+
+constexpr void uuid_to_cstr(md5::Digest const &d, char *const p) noexcept
+{
+    for ( unsigned i = 0u; i < md5::Digest::count; ++i )
+    {
+        constexpr unsigned multiplier = 2u * (CHAR_BIT / 8u);
+
+        for ( unsigned j = 0u; j < multiplier; ++j )
+        {
+            unsigned const j_inverted = multiplier-1u-j;
+            p[multiplier * i + j] = md5::hexchars[ 0xF & (d[i] >> (4u*j_inverted)) ];
+        }
+    }
+
+    p[32] = '\0';
 }
 
 #endif  // HEADER_INCLUSION_GUARD
