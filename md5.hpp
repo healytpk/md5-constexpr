@@ -32,7 +32,8 @@ namespace md5 {
         constexpr std::size_t           size(void) const noexcept { return N; }
     };
 
-    typedef array< char unsigned, (128u / CHAR_BIT) + !!(128u % CHAR_BIT) > Digest;
+    constexpr unsigned viable_bits_per_byte = (CHAR_BIT / 8u) * 8u;
+    typedef array< char unsigned, (128u / viable_bits_per_byte) + !!(128u % viable_bits_per_byte) > Digest;
 
     namespace details {
 
