@@ -5,54 +5,76 @@
 
 #include <climits>          // CHAR_BIT, UCHAR_MAX
 #include <cstddef>          // size_t
-#include <cstdint>          // uint_fast32_t
 #include <cstring>          // strlen
-#include <array>            // array
-#include <random>           // random_device
+//#include <random>           // random_device
 #include <type_traits>      // is_constant_evaluated (c++20)
 
 #ifdef __cpp_lib_string_view
 #   include <string_view>  // c++17
 #endif
 
+#ifdef __TI_COMPILER_VERSION__
+#    define constexprfunc
+#    define constexprvar  const
+#    define noexcept
+#else
+#    define constexprfunc constexpr
+#    define constexprvar  constexpr
+#endif
+
 namespace md5 {
 
-    constexpr char hexchars[] = "0123456789abcdef";
+    constexprvar char hexchars[] = "0123456789abcdef";
 
     template<typename T, std::size_t N>
     struct array {
-        static constexpr unsigned count = N;  // --------------------------- FIX THIS
+        static constexprvar unsigned count = N;
         T b[count];
-        constexpr T       &operator[](unsigned const n)       noexcept { return this->b[n]; }
-        constexpr T const &operator[](unsigned const n) const noexcept { return this->b[n]; }
-        constexpr char unsigned       *begin(void)       noexcept { return b; }
-        constexpr char unsigned       *end  (void)       noexcept { return b + count; }
-        constexpr char unsigned const *begin(void) const noexcept { return b; }
-        constexpr char unsigned const *end  (void) const noexcept { return b + count; }
-        constexpr std::size_t           size(void) const noexcept { return N; }
+        constexprfunc T       &operator[](unsigned const n)       noexcept { return this->b[n]; }
+        constexprfunc T const &operator[](unsigned const n) const noexcept { return this->b[n]; }
+        constexprfunc char unsigned       *begin(void)       noexcept { return b; }
+        constexprfunc char unsigned       *end  (void)       noexcept { return b + count; }
+        constexprfunc char unsigned const *begin(void) const noexcept { return b; }
+        constexprfunc char unsigned const *end  (void) const noexcept { return b + count; }
+        constexprfunc std::size_t           size(void) const noexcept { return N; }
+
+#ifdef __TI_COMPILER_VERSION__
+        array(void) : b() {}
+        array(T const arg0, T const arg1, T const arg2, T const arg3)
+        {
+            this->b[0] = arg0;
+            this->b[1] = arg1;
+            this->b[2] = arg2;
+            this->b[3] = arg3;
+        }
+#endif
     };
 
-    constexpr unsigned viable_bits_per_byte = (CHAR_BIT / 8u) * 8u;
-    constexpr unsigned wasted_bits_per_byte = CHAR_BIT - viable_bits_per_byte;
-    constexpr unsigned viable_bitmask = (unsigned)(char unsigned)-1 >> wasted_bits_per_byte;
+    constexprvar unsigned viable_bits_per_byte = (CHAR_BIT / 8u) * 8u;
+    constexprvar unsigned wasted_bits_per_byte = CHAR_BIT - viable_bits_per_byte;
+    constexprvar unsigned viable_bitmask = (unsigned)(char unsigned)-1 >> wasted_bits_per_byte;
     typedef array< char unsigned, (128u / viable_bits_per_byte) + !!(128u % viable_bits_per_byte) > Digest;
 
     namespace details {
 
         using std::size_t;
-        using std::uint_fast32_t;
 
+#if 0
+        using std::uint_fast32_t;
         // We can't use uint_fast32_t if it undergoes promotion,
         // so instead use long unsigned (which might be 64-Bit)
         typedef typename std::conditional<
             std::is_same< uint_fast32_t, decltype(uint_fast32_t() + uint_fast32_t()) >::value,
             uint_fast32_t,
             long unsigned >::type UIntType;
+#else
+        typedef long unsigned UIntType;
+#endif
 
-        constexpr UIntType constant_c = 64u;
-        constexpr UIntType constant_L = constant_c / 4u;
+        constexprvar UIntType constant_c = 64u;
+        constexprvar UIntType constant_L = constant_c / 4u;
 
-        constexpr size_t const_strlen(char const *str) noexcept
+        constexprfunc size_t const_strlen(char const *str) noexcept
         {
 #ifdef __cpp_lib_is_constant_evaluated
             if constexpr ( false == std::is_constant_evaluated() )
@@ -67,7 +89,7 @@ namespace md5 {
             }
         }
 
-        constexpr Digest make_digest(array<UIntType, 4u> const &input) noexcept
+        constexprfunc Digest make_digest(array<UIntType, 4u> const &input) noexcept
         {
             Digest digest{};
             for ( unsigned i = 0u; i < input.size(); ++i )
@@ -80,37 +102,37 @@ namespace md5 {
             return digest;
         }
 
-        constexpr UIntType f(UIntType const b, UIntType const c, UIntType const d) noexcept
+        constexprfunc UIntType f(UIntType const b, UIntType const c, UIntType const d) noexcept
         {
             return (b & c) | (~b & d);
         }
 
-        constexpr UIntType g(UIntType const b, UIntType const c, UIntType const d) noexcept
+        constexprfunc UIntType g(UIntType const b, UIntType const c, UIntType const d) noexcept
         {
             return (b & d) | (c & ~d);
         }
 
-        constexpr UIntType h(UIntType const b, UIntType const c, UIntType const d) noexcept
+        constexprfunc UIntType h(UIntType const b, UIntType const c, UIntType const d) noexcept
         {
             return b ^ c ^ d;
         }
 
-        constexpr UIntType i(UIntType const b, UIntType const c, UIntType const d) noexcept
+        constexprfunc UIntType i(UIntType const b, UIntType const c, UIntType const d) noexcept
         {
             return c ^ (b | ~d);
         }
 
         typedef UIntType (*Fn)(UIntType, UIntType, UIntType);
-        constexpr Fn array_of_funcptrs[4u] = { f, g, h, i };
+        constexprvar Fn array_of_funcptrs[4u] = { f, g, h, i };
 
-        constexpr UIntType block_G[constant_c] = {
+        constexprvar UIntType block_G[constant_c] = {
             0u, 1u,  2u,  3u,  4u,  5u,  6u,  7u,  8u,  9u, 10u, 11u, 12u, 13u, 14u, 15u,
             1u, 6u, 11u,  0u,  5u, 10u, 15u,  4u,  9u, 14u,  3u,  8u, 13u,  2u,  7u, 12u,
             5u, 8u, 11u, 14u,  1u,  4u,  7u, 10u, 13u,  0u,  3u,  6u,  9u, 12u, 15u,  2u,
             0u, 7u, 14u,  5u, 12u, 3u,  10u,  1u,  8u, 15u,  6u, 13u,  4u, 11u,  2u,  9u
         };
 
-        constexpr UIntType block_K[constant_c] = {
+        constexprvar UIntType block_K[constant_c] = {
             0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
             0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
             0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be,
@@ -129,14 +151,14 @@ namespace md5 {
             0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391
         };
 
-        constexpr UIntType block_S[constant_L] = {
+        constexprvar UIntType block_S[constant_L] = {
             7u, 12u, 17u, 22u,
             5u,  9u, 14u, 20u,
             4u, 11u, 16u, 23u,
             6u, 10u, 15u, 21u
         };
 
-        constexpr char padding[constant_c] = {
+        constexprvar char padding[constant_c] = {
       (char)0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x80 = -128 two's complement
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -147,18 +169,18 @@ namespace md5 {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
         };
 
-        constexpr UIntType rotate(UIntType x, UIntType const n) noexcept
+        constexprfunc UIntType rotate(UIntType x, UIntType const n) noexcept
         {
             x &= 0xfffffffful;  // The only change needed for 64-Bit
             return (x << n) | (x >> (32u - n));
         }
 
-        constexpr UIntType t(Fn arg_func, UIntType a, UIntType b, UIntType c, UIntType d, UIntType x, UIntType s, UIntType ac) noexcept
+        constexprfunc UIntType t(Fn arg_func, UIntType a, UIntType b, UIntType c, UIntType d, UIntType x, UIntType s, UIntType ac) noexcept
         {
             return b + rotate(a + arg_func(b, c, d) + x + ac, s);
         }
 
-        constexpr UIntType array_to_long_unsigned(char unsigned const *const data) noexcept
+        constexprfunc UIntType array_to_long_unsigned(char unsigned const *const data) noexcept
         {
             return
                 (static_cast<UIntType>(data[3] & 0xFF) << 24u) |
@@ -172,14 +194,18 @@ namespace md5 {
             array<UIntType, 4u> state;
             UIntType nl, nh;
 
-            constexpr Context() noexcept
+            constexprfunc Context() noexcept
                 : buffer()
+#ifdef __TI_COMPILER_VERSION__
+                , state( 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476 )
+#else
                 , state{ 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476 }
+#endif
                 , nl(0u)
                 , nh(0u)
             {}
 
-            constexpr void append(char const *const data, size_t const len) noexcept
+            constexprfunc void append(char const *const data, size_t const len) noexcept
             {
                 UIntType input[constant_L]{};
                 UIntType k = (nl >> 3u) & 0x3f;
@@ -204,27 +230,27 @@ namespace md5 {
             }
 
             template <size_t N>
-            constexpr Context &operator<<( char const (&data)[N] ) noexcept
+            constexprfunc Context &operator<<( char const (&data)[N] ) noexcept
             {
                 this->append( data, N - 1u );
                 return *this;
             }
 
-            constexpr Context &operator<<( char const *const data ) noexcept
+            constexprfunc Context &operator<<( char const *const data ) noexcept
             {
                 this->append( data, const_strlen(data) );
                 return *this;
             }
 
 #ifdef __cpp_lib_string_view
-            constexpr Context &operator<<(std::string_view const s) noexcept
+            constexprfunc Context &operator<<(std::string_view const s) noexcept
             {
                 this->append(s.data(), s.size());
                 return *this;
             }
 #endif
 
-            constexpr void transform(UIntType const (&input)[constant_L]) noexcept
+            constexprfunc void transform(UIntType const (&input)[constant_L]) noexcept
             {
                 UIntType a = state[0], b = state[1], c = state[2], d = state[3];
                 for ( unsigned r = 0u; r < 4u; ++r )
@@ -248,7 +274,7 @@ namespace md5 {
                 state[3] += d;
             }
 
-            constexpr Digest final(void) noexcept
+            constexprfunc Digest final(void) noexcept
             {
                 UIntType input[constant_L]{};
                 unsigned const k = (nl >> 3u) & 0x3f;
@@ -271,25 +297,25 @@ namespace md5 {
     }  // close namespace 'details'
 
     template <std::size_t N>
-    constexpr Digest compute( char const (&s)[N] ) noexcept
+    constexprfunc Digest compute( char const (&s)[N] ) noexcept
     {
         return (details::Context() << s).final();
     }
 
-    constexpr Digest compute(char const *const s) noexcept
+    constexprfunc Digest compute(char const *const s) noexcept
     {
         return (details::Context() << s).final();
     }
 
 #ifdef __cpp_lib_string_view
-    constexpr Digest compute(std::string_view const s) noexcept
+    constexprfunc Digest compute(std::string_view const s) noexcept
     {
         return (details::Context() << s).final();
     }
 #endif //__cpp_lib_string_view
 
 /*
-    constexpr __uint128_t to_uint128(Digest const &arr)
+    constexprfunc __uint128_t to_uint128(Digest const &arr)
     {
         __uint128_t n = 0u;
         
@@ -308,7 +334,7 @@ namespace md5 {
 */
 }
 
-constexpr md5::Digest rand128_to_UUIDv4(md5::Digest arg) noexcept
+constexprfunc md5::Digest rand128_to_UUIDv4(md5::Digest arg) noexcept
 {
     // Set to version 4 and IETF variant
     //arg &= ((__uint128_t)0xffffffffffff003f << 64u) | 0xff0fffffffffffff;
@@ -319,7 +345,7 @@ constexpr md5::Digest rand128_to_UUIDv4(md5::Digest arg) noexcept
 #ifdef __cpp_consteval
     consteval  // c++(20)
 #else
-    constexpr
+    constexprfunc
 #endif
 md5::Digest uuid(char const *const name) noexcept
 {
@@ -330,6 +356,7 @@ md5::Digest uuid(char const *const name) noexcept
     return digest;
 }
 
+/*
 md5::Digest uuid(void) noexcept(false)
 {
     std::random_device rd;  // might throw
@@ -338,13 +365,14 @@ md5::Digest uuid(void) noexcept(false)
     for ( auto &b : d ) b = static_cast< char unsigned >(  rd() & UCHAR_MAX  );
     return d;
 }
+*/
 
-constexpr void uuid_to_cstr(md5::Digest const &d, char *p) noexcept
+constexprfunc void uuid_to_cstr(md5::Digest const &d, char *p) noexcept
 {
     *p++ = '{';
     for ( unsigned i = 0u; i < md5::Digest::count; ++i )
     {
-        constexpr unsigned multiplier = 2u * (CHAR_BIT / 8u);
+        constexprvar unsigned multiplier = 2u * (CHAR_BIT / 8u);
 
         for ( unsigned j = 0u; j < multiplier; ++j )
         {
