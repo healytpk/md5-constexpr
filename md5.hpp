@@ -189,7 +189,8 @@ namespace md5 {
                 nh += length >> 29u;
                 for ( char const *ptr = data; ptr != (data + len); ++ptr )
                 {
-                    buffer[k++] = static_cast<char unsigned>(static_cast<int16_t>(*ptr) + UCHAR_MAX + 1);
+                  //buffer[k++] = static_cast<char unsigned>(static_cast<int16_t>(*ptr) + UCHAR_MAX + 1);
+                    buffer[k++] = *ptr;  // fine for two's complement
                     if ( 0x40 != k ) continue;
                     int j = 0;
                     for ( int i = 0; i < constant_L; ++i )
@@ -338,8 +339,9 @@ md5::Digest uuid(void) noexcept(false)
     return d;
 }
 
-constexpr void uuid_to_cstr(md5::Digest const &d, char *const p) noexcept
+constexpr void uuid_to_cstr(md5::Digest const &d, char *p) noexcept
 {
+    *p++ = '{';
     for ( unsigned i = 0u; i < md5::Digest::count; ++i )
     {
         constexpr unsigned multiplier = 2u * (CHAR_BIT / 8u);
@@ -347,11 +349,22 @@ constexpr void uuid_to_cstr(md5::Digest const &d, char *const p) noexcept
         for ( unsigned j = 0u; j < multiplier; ++j )
         {
             unsigned const j_inverted = multiplier-1u-j;
-            p[multiplier * i + j] = md5::hexchars[ 0xF & (d[i] >> (4u*j_inverted)) ];
+            unsigned const index = multiplier * i + j;
+            p[index] = md5::hexchars[ 0xF & (d[i] >> (4u*j_inverted)) ];
+            switch ( index )
+            {
+            case  7u:
+            case 11u:
+            case 15u:
+            case 20u:
+                ++p;
+                p[index] = '-';
+
+            }
         }
     }
-
-    p[32] = '\0';
+    p[32] = '}';
+    p[33] = '\0';
 }
 
 #endif  // HEADER_INCLUSION_GUARD
