@@ -218,11 +218,9 @@ namespace md5 {
                   //buffer[k++] = static_cast<char unsigned>(static_cast<int16_t>(*ptr) + UCHAR_MAX + 1);
                     buffer[k++] = *ptr;  // fine for two's complement
                     if ( 0x40 != k ) continue;
-                    int j = 0;
-                    for ( int i = 0; i < constant_L; ++i )
+                    for ( unsigned i = 0; i < constant_L; ++i )
                     {
-                        input[i] = array_to_long_unsigned(&buffer[j]);
-                        j += 4;
+                        input[i] = array_to_long_unsigned(&buffer[i * 4u]);
                     }
                     transform(input);
                     k = 0;
@@ -283,11 +281,9 @@ namespace md5 {
 
                 append(padding, k < 56u ? 56u - k : 120u - k);
 
-                unsigned j = 0u;
                 for ( unsigned i = 0u; i < 14u; ++i )
                 {
-                    input[i] = array_to_long_unsigned(&buffer[j]);
-                    j += 4u;
+                    input[i] = array_to_long_unsigned(&buffer[i*4u]);
                 }
 
                 transform(input);
