@@ -5,7 +5,7 @@
 
 #include <climits>          // CHAR_BIT, UCHAR_MAX
 #include <cstddef>          // size_t
-#include <cstdint>          // int16_t
+#include <cstdint>          // uint_fast32_t
 #include <cstring>          // strlen
 #include <array>            // array
 #include <random>           // random_device
@@ -33,11 +33,12 @@ namespace md5 {
     };
 
     constexpr unsigned viable_bits_per_byte = (CHAR_BIT / 8u) * 8u;
+    constexpr unsigned wasted_bits_per_byte = CHAR_BIT - viable_bits_per_byte;
+    constexpr unsigned viable_bitmask = (unsigned)(char unsigned)-1 >> wasted_bits_per_byte;
     typedef array< char unsigned, (128u / viable_bits_per_byte) + !!(128u % viable_bits_per_byte) > Digest;
 
     namespace details {
 
-        using std::array;
         using std::size_t;
         using std::uint_fast32_t;
 
@@ -71,10 +72,10 @@ namespace md5 {
             Digest digest{};
             for ( unsigned i = 0u; i < input.size(); ++i )
             {
-                digest[i * 4u + 0u] = (input[i] >> 0u ) & 0xff;
-                digest[i * 4u + 1u] = (input[i] >> 8u ) & 0xff;
-                digest[i * 4u + 2u] = (input[i] >> 16u) & 0xff;
-                digest[i * 4u + 3u] = (input[i] >> 24u) & 0xff;
+                for ( unsigned j = 0u; j < (32u / viable_bits_per_byte); ++j )
+                {
+                    digest[i * 4u + j] = (input[i] >> (viable_bits_per_byte*j)) & viable_bitmask;
+                }
             }
             return digest;
         }
@@ -224,7 +225,7 @@ namespace md5 {
 
             constexpr void transform(UIntType const (&input)[constant_L]) noexcept
             {
-                UIntType a = std::get<0u>(state), b = std::get<1u>(state), c = std::get<2u>(state), d = std::get<3u>(state);
+                UIntType a = state[0], b = state[1], c = state[2], d = state[3];
                 for ( unsigned r = 0u; r < 4u; ++r )
                 {
                     UIntType const *const pG = block_G + r * constant_L;
@@ -240,10 +241,10 @@ namespace md5 {
                         b = new_b;
                     }
                 }
-                std::get<0u>(state) += a;
-                std::get<1u>(state) += b;
-                std::get<2u>(state) += c;
-                std::get<3u>(state) += d;
+                state[0] += a;
+                state[1] += b;
+                state[2] += c;
+                state[3] += d;
             }
 
             constexpr Digest final(void) noexcept
